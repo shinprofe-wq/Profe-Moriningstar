@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지능형 복지 통합 관제 시스템 (API-R)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap');
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        
+        .status-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .data-card { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(51, 65, 85, 0.5); transition: all 0.3s ease; }
+        .data-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+        
+        .mode-btn { transition: all 0.2s; border: 1px solid transparent; }
+        .mode-btn.active { background: #3b82f6; color: white; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        
+        .map-dot { position: absolute; width: 10px; height: 10px; border-radius: 50%; }
+        .dot-red { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        .dot-green { background: #10b981; box-shadow: 0 0 10px #10b981; }
+        .dot-blue { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-6 lg:p-8">
+
+    <!-- TOP HEADER -->
+    <header class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
+        <div class="flex items-center space-x-5">
+            <div class="w-16 h-16 bg-gradient-to-tr from-blue-700 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-blue-500/20">
+                <span class="text-white font-black text-3xl tracking-tighter">R</span>
+            </div>
+            <div>
+                <h1 class="text-2xl lg:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">지능형 국가 복지 통합 관제 센터</h1>
+                <div class="flex items-center gap-3 text-blue-400/80 text-sm mt-1">
+                    <span class="px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded font-bold uppercase">G2C Active Logic</span>
+                    <span class="text-slate-500">|</span>
+                    <span class="font-medium">국민 생애주기별 맞춤형 API-R 플랫폼</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <!-- MODE SELECTOR -->
+            <div class="flex bg-slate-900 p-1.5 rounded-xl border border-slate-800 shadow-inner">
+                <button onclick="changeMode('silver')" id="btn-silver" class="mode-btn active px-5 py-2 rounded-lg text-sm font-bold">실버케어 (6075)</button>
+                <button onclick="changeMode('birth')" id="btn-birth" class="mode-btn px-5 py-2 rounded-lg text-sm font-bold text-slate-400">출산/산전지원</button>
+                <button onclick="changeMode('disabled')" id="btn-disabled" class="mode-btn px-5 py-2 rounded-lg text-sm font-bold text-slate-400">장애인 맞춤케어</button>
+            </div>
+            <!-- TIME DISPLAY -->
+            <div class="hidden md:block text-right bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                <p class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Current Time</p>
+                <p id="current-time" class="text-lg font-mono text-blue-400">Loading...</p>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD GRID -->
+    <div class="grid grid-cols-12 gap-6">
+        
+        <!-- SIDEBAR -->
+        <div class="col-span-12 lg:col-span-3 space-y-6">
+            <div class="data-card p-6 rounded-2xl border-l-4 border-blue-500">
+                <p id="stat-label-1" class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">실시간 노드 연결 (전국)</p>
+                <div class="flex items-end gap-2">
+                    <span id="stat-value-1" class="text-4xl font-black italic">1,482,093</span>
+                    <span class="text-green-400 text-sm mb-1 font-bold">▲ 0.4%</span>
+                </div>
+            </div>
+
+            <div class="data-card p-6 rounded-2xl border-l-4 border-red-500">
+                <div class="flex justify-between items-start mb-4">
+                    <p class="text-red-400 text-xs font-bold uppercase tracking-widest">긴급 리버스 분석 (Abnormal)</p>
+                    <span class="w-3 h-3 bg-red-500 rounded-full status-pulse"></span>
+                </div>
+                <div id="alert-count" class="text-5xl font-black mb-4">08 <span class="text-lg font-normal text-slate-500 italic">Critical</span></div>
+                <div id="alert-list" class="text-xs text-slate-400 space-y-2 border-t border-slate-800 pt-4">
+                    <div class="flex justify-between py-1"><span>강남구 김*남 (심박이상)</span><span class="text-red-400 font-bold">119 출동</span></div>
+                    <div class="flex justify-between py-1"><span>의정부 이*자 (활동급감)</span><span class="text-orange-400 font-bold">의사연결</span></div>
+                </div>
+            </div>
+
+            <div class="data-card p-6 rounded-2xl border-l-4 border-emerald-500">
+                <p id="stat-label-2" class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">맞춤 영양/의료 지원 (Normal)</p>
+                <div id="support-count" class="text-4xl font-black mb-2">4,129 <span class="text-sm font-normal text-slate-500 italic">Orders</span></div>
+                <div id="support-tags" class="flex flex-wrap gap-2 mt-4">
+                    <span class="bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 px-2 py-1 rounded">비타민 복합</span>
+                    <span class="bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 px-2 py-1 rounded">칼슘/미네랄</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER: MAP -->
+        <div class="col-span-12 lg:col-span-6 space-y-6">
+            <div class="data-card p-6 rounded-3xl h-[480px] relative overflow-hidden bg-slate-900/40 border-slate-800">
+                <h3 id="map-title" class="text-slate-200 text-sm font-bold mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                    실버케어 데이터 포집 및 역방향 제어 맵
+                </h3>
+                <div class="absolute inset-0 flex items-center justify-center opacity-30 p-12">
+                    <svg viewBox="0 0 400 500" class="h-full w-auto text-slate-600 fill-current">
+                        <path d="M150 50 Q200 20 250 50 T300 150 T280 300 T200 450 T100 350 T80 150 Z" />
+                    </svg>
+                </div>
+                <div id="map-dots">
+                    <div class="map-dot dot-red status-pulse" style="top: 35%; left: 45%;"></div>
+                    <div class="map-dot dot-green" style="top: 60%; left: 55%;"></div>
+                    <div class="map-dot dot-blue" style="top: 25%; left: 40%;"></div>
+                </div>
+                <div class="absolute bottom-6 left-6 right-6 flex gap-4">
+                    <div class="flex-1 bg-black/60 backdrop-blur-xl p-4 rounded-2xl border border-white/5 shadow-2xl">
+                        <p class="text-[10px] text-slate-500 font-bold uppercase mb-1">AI 교차 분석 엔진</p>
+                        <p id="engine-status" class="text-xs font-medium text-blue-400">활동량 vs 처방전 매칭 로직 가동중...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card p-6 rounded-3xl">
+                <h3 class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-6">물류 및 배송 프로세스 (Flowchart Logic)</h3>
+                <div class="flex items-center justify-between px-10">
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500 border border-blue-500/20 mb-2">1</div>
+                        <span class="text-[10px] text-slate-500">정보취합</span>
+                    </div>
+                    <div class="flex-1 h-px border-t border-dashed border-slate-700 mx-2 mb-6"></div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-500 border border-indigo-500/20 mb-2 font-bold">R</div>
+                        <span class="text-[10px] text-slate-500">API-R 결정</span>
+                    </div>
+                    <div class="flex-1 h-px border-t border-dashed border-slate-700 mx-2 mb-6"></div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 border border-emerald-500/20 mb-2 font-bold">3</div>
+                        <span class="text-[10px] text-slate-500">배송/지원</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: LOGS -->
+        <div class="col-span-12 lg:col-span-3">
+            <div class="data-card p-5 rounded-3xl h-[645px] flex flex-col">
+                <h3 class="text-slate-200 text-sm font-bold italic underline decoration-blue-500 underline-offset-4 tracking-tighter mb-6 uppercase">Real-time Logs</h3>
+                <div id="log-container" class="flex-1 overflow-y-auto font-mono text-[10px] space-y-3 pr-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modes = {
+            silver: {
+                title: "실버케어 데이터 포집 및 역방향 제어 맵",
+                stat1: "실시간 노드 연결 (6075)",
+                stat2: "맞춤 영양/의료 지원 (Normal)",
+                engine: "활동량 vs 처방전 매칭 로직 가동중...",
+                logs: ["ID:6075-KR-02 활동량 급감 -> 역방향 호출", "비타민/미네랄 배송 지시 완료", "심박 이상 감지 -> 119 접수 완료"]
+            },
+            birth: {
+                title: "산전/출산 지원 모니터링 (Maternity)",
+                stat1: "임산부 등록 노드",
+                stat2: "필수 영양제 지급 (Folic/Iron)",
+                engine: "임신 주차별 영양 분석 및 정기검진 API 가동중...",
+                logs: ["임신 12주차: 엽산/철분 배송 완료", "산전 검사 일정 자동 알림 전송"]
+            },
+            disabled: {
+                title: "장애우 생활 밀착형 케어 시스템",
+                stat1: "장애우 스마트 노드",
+                stat2: "일자별 지원 프로그램 (Daily)",
+                engine: "생체정보(혈압/심박) 실시간 API-R 분석중...",
+                logs: ["스마트워치 심박 변동 감지 -> 보호자 알림", "지역사회 이동 지원 차량 예약 완료"]
+            }
+        };
+
+        function changeMode(mode) {
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-slate-400');
+            });
+            const activeBtn = document.getElementById('btn-' + mode);
+            if(activeBtn) {
+                activeBtn.classList.add('active');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            const data = modes[mode];
+            document.getElementById('map-title').innerText = data.title;
+            document.getElementById('stat-label-1').innerText = data.stat1;
+            document.getElementById('stat-label-2').innerText = data.stat2;
+            document.getElementById('engine-status').innerText = data.engine;
+            
+            const logContainer = document.getElementById('log-container');
+            logContainer.innerHTML = '';
+            data.logs.forEach(msg => addLog(msg));
+        }
+
+        function updateTime() {
+            const now = new Date();
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.innerText = now.toLocaleString();
+            }
+        }
+
+        function addLog(msg) {
+            const logContainer = document.getElementById('log-container');
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML = `<span class="opacity-30">[${time}]</span> <span class="text-blue-400">${msg}</span>`;
+            logContainer.prepend(div);
+        }
+
+        window.onload = () => {
+            setInterval(updateTime, 1000);
+            updateTime();
+            changeMode('silver');
+            setInterval(() => {
+                const currentMode = document.querySelector('.mode-btn.active').id.split('-')[1];
+                const msgs = modes[currentMode].logs;
+                addLog(msgs[Math.floor(Math.random() * msgs.length)]);
+            }, 4000);
+        };
+    </script>
+</body>
+</html>
